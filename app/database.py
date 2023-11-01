@@ -118,6 +118,23 @@ class SQLite3:
         returns: A single row, a list of rows or None.
 
         """
+        sanitized_args = []
+
+        for arg in args:
+            if isinstance(arg, str):
+                # For text input: Use sqlite3.escape_string to escape special characters
+                sanitized_arg = sqlite3.escape_string(arg)
+                sanitized_args.append(sanitized_arg)
+            elif isinstance(arg, (int, float)):
+                # For numeric input: Ensure it's a number and within the expected range
+                if isinstance(arg, int) and arg >= 0:
+                    sanitized_args.append(arg)
+                else:
+                    raise ValueError("Invalid numeric input")
+            else:
+                # You can add more specific validation for other data types as needed
+                raise ValueError("Invalid input type")
+        
         cursor = self.connection.execute(query, args)
         response = cursor.fetchone() if one else cursor.fetchall()
         cursor.close()
