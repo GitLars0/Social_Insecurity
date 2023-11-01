@@ -15,6 +15,7 @@ from app.database import SQLite3
 # Instantiate and configure the app
 app = Flask(__name__)
 app.config.from_object(Config)
+secret_key = app.config["SECRET_KEY"]
 
 # Instantiate the sqlite database extension
 sqlite = SQLite3(app, schema="schema.sql")
@@ -38,4 +39,4 @@ with app.app_context():
         upload_path.mkdir(parents=True, exist_ok=True)
 
 # Import the routes after the app is configured
-from app import routes  # noqa: E402,F401
+from app import routes
