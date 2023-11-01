@@ -13,7 +13,10 @@ from app.database import SQLite3
 # from flask_wtf.csrf import CSRFProtect
 
 # Instantiate and configure the app
+
 app = Flask(__name__)
+csrf = CSRFProtect()
+csrf.init_app(app)
 app.config.from_object(Config)
 secret_key = app.config["SECRET_KEY"]
 
