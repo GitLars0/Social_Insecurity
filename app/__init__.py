@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import cast
 
 from flask import Flask
-
+from flask_wtf.csrf import CSRFProtect
 from app.config import Config
 from app.database import SQLite3
 
@@ -28,7 +28,7 @@ sqlite = SQLite3(app, schema="schema.sql")
 
 # TODO: The CSRF protection is not working, I should probably fix that
 # csrf = CSRFProtect(app)
-
+csrf = CSRFProtect(app)
 # Create the instance and upload folder if they do not exist
 with app.app_context():
     instance_path = Path(app.instance_path)
