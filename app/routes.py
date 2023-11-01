@@ -3,6 +3,7 @@
 This file contains the routes for the application. It is imported by the app package.
 It also contains the SQL queries used for communicating with the database.
 """
+#Just a test
 
 from pathlib import Path
 
@@ -11,9 +12,9 @@ from flask import flash, redirect, render_template, send_from_directory, url_for
 from app import app, sqlite
 from app.forms import CommentsForm, FriendsForm, IndexForm, PostForm, ProfileForm
 
-
 @app.route("/", methods=["GET", "POST"])
 @app.route("/index", methods=["GET", "POST"])
+
 def index():
     """Provides the index page for the application.
 
@@ -45,11 +46,10 @@ def index():
         insert_user = f"""
             INSERT INTO Users (username, first_name, last_name, password)
             VALUES ('{register_form.username.data}', '{register_form.first_name.data}', '{register_form.last_name.data}', '{register_form.password.data}');
-            """
+            """  # noqa: E501
         sqlite.query(insert_user)
         flash("User successfully created!", category="success")
         return redirect(url_for("index"))
-
     return render_template("index.html.j2", title="Welcome", form=index_form)
 
 
@@ -86,7 +86,7 @@ def stream(username: str):
          FROM Posts AS p JOIN Users AS u ON u.id = p.u_id
          WHERE p.u_id IN (SELECT u_id FROM Friends WHERE f_id = {user["id"]}) OR p.u_id IN (SELECT f_id FROM Friends WHERE u_id = {user["id"]}) OR p.u_id = {user["id"]}
          ORDER BY p.creation_time DESC;
-        """
+        """  # noqa: E501
     posts = sqlite.query(get_posts)
     return render_template("stream.html.j2", title="Stream", username=username, form=post_form, posts=posts)
 

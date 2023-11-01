@@ -9,6 +9,7 @@ Example:
     app = Flask(__name__)
     db = SQLite3(app)
 """
+#Hei
 
 from __future__ import annotations
 
@@ -18,7 +19,6 @@ from pathlib import Path
 from typing import Any, Optional, cast
 
 from flask import Flask, current_app, g
-
 
 class SQLite3:
     """Provides a SQLite3 database extension for Flask.
@@ -124,7 +124,7 @@ class SQLite3:
         self.connection.commit()
         return response
 
-    # TODO: Add more specific query methods to simplify code
+    # TODO: Add more specific query methods to simplify code, hehfehf
 
     def _init_database(self, schema: PathLike | str) -> None:
         """Initializes the database with the supplied schema if it does not exist yet."""

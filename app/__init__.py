@@ -1,4 +1,4 @@
-"""Provides the app package for the Social Insecurity application. The package contains the Flask app and all of the extensions and routes."""
+"""Provides the app package for the Social Insecurity application. The package contains the Flask app and all of the extensions and routes."""  # noqa: E501
 
 from pathlib import Path
 from typing import cast
