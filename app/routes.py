@@ -7,8 +7,8 @@ It also contains the SQL queries used for communicating with the database.
 
 from pathlib import Path
 from app.config import Config
-from flask import flash, redirect, render_template, send_from_directory, url_for
 from werkzeug.utils import secure_filename
+from flask import flash, redirect, render_template, send_from_directory, url_for
 from app import app, sqlite
 from app.forms import CommentsForm, FriendsForm, IndexForm, PostForm, ProfileForm
 from flask_csp.csp import csp_header
@@ -60,6 +60,7 @@ def is_valid_username(username):
 
 @app.route("/", methods=["GET", "POST"])
 @app.route("/index", methods=["GET", "POST"])
+@csp_header({'default-src':"'self'",'script-src':"'self' https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.min.js ", 'style-src-elem': "'self' https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css " })
 
 def index():
     index_form = IndexForm()
@@ -136,6 +137,7 @@ def index():
 
 
 @app.route("/stream/<string:username>", methods=["GET", "POST"])
+@csp_header({'default-src':"'self'",'script-src':"'self' https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.min.js ", 'style-src-elem': "'self' https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css " })
 def stream(username: str):
     """Provides the stream page for the application.
 
@@ -179,6 +181,7 @@ def stream(username: str):
 
 
 @app.route("/comments/<string:username>/<int:post_id>", methods=["GET", "POST"])
+@csp_header({'default-src':"'self'",'script-src':"'self' https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.min.js ", 'style-src-elem': "'self' https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css " })
 def comments(username: str, post_id: int):
     """Provides the comments page for the application.
 
@@ -238,10 +241,11 @@ def friends(username: str):
     user = sqlite.query(get_user, one=True)
 
     if friends_form.is_submitted():
+        sanitizeds_friend = escape(friends_form.username.data)
         get_friend = f"""
             SELECT *
             FROM Users
-            WHERE username = '{friends_form.username.data}';
+            WHERE username = '{sanitizeds_friend}';
             """
         friend = sqlite.query(get_friend, one=True)
         get_friends = f"""
@@ -275,6 +279,7 @@ def friends(username: str):
 
 
 @app.route("/profile/<string:username>", methods=["GET", "POST"])
+@csp_header({'default-src':"'self'",'script-src':"'self' https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.min.js ", 'style-src-elem': "'self' https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css " })
 def profile(username: str):
     """Provides the profile page for the application.
 
@@ -312,6 +317,7 @@ def profile(username: str):
 
 
 @app.route("/uploads/<string:filename>")
+@csp_header({'default-src':"'self'",'script-src':"'self' https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.min.js ", 'style-src-elem': "'self' https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css " })
 def uploads(filename):
     """Provides an endpoint for serving uploaded files."""
     return send_from_directory(Path(app.instance_path) / app.config["UPLOADS_FOLDER_PATH"], filename)
