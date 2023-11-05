@@ -12,10 +12,12 @@ from werkzeug.utils import secure_filename
 from app import app, sqlite
 from app.forms import CommentsForm, FriendsForm, IndexForm, PostForm, ProfileForm
 from flask_csp.csp import csp_header
+
 import re
 import bcrypt
 import time
 from flask import session
+
 
 app.config.from_object(Config)
 def escape(t):
@@ -24,6 +26,7 @@ def escape(t):
 
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
+
 
 def sanitize_input(input_str, field):
     # Remove characters that are not allowed in usernames and names
