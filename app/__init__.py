@@ -2,7 +2,7 @@
 
 from pathlib import Path
 from typing import cast
-
+from flask_cors import CORS
 from flask import Flask
 from flask_wtf.csrf import CSRFProtect
 from app.config import Config
@@ -19,7 +19,7 @@ csrf = CSRFProtect()
 csrf.init_app(app)
 app.config.from_object(Config)
 secret_key = app.config["SECRET_KEY"]
-
+CORS(app)
 # Instantiate the sqlite database extension
 sqlite = SQLite3(app, schema="schema.sql")
 
