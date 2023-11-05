@@ -107,41 +107,30 @@ class SQLite3:
             conn.row_factory = sqlite3.Row
         return conn
 
-    def query(self, query: str, one: bool = False, *args) -> Any:
-        """Queries the database and returns the result.'
+    def query(self, query: str, one: bool = False, params: tuple = ()) -> Any:
 
-        params:
-            query: The SQL query to execute.
-            one: Whether to return a single row or a list of rows.
-            args: Additional arguments to pass to the query.
-
-        returns: A single row, a list of rows or None.
-
-        """
-        sanitized_args = []
-
-        for arg in args:
-            if isinstance(arg, str):
-                # For text input: Use sqlite3.escape_string to escape special characters
-                sanitized_arg = sqlite3.escape_string(arg)
-                sanitized_args.append(sanitized_arg)
-            elif isinstance(arg, (int, float)):
-                # For numeric input: Ensure it's a number and within the expected range
-                if isinstance(arg, int) and arg >= 0:
-                    sanitized_args.append(arg)
-                else:
-                    raise ValueError("Invalid numeric input")
-            else:
-                # You can add more specific validation for other data types as needed
-                raise ValueError("Invalid input type")
+        cursor = self.connection.cursor()
+        cursor.execute(query, params)
         
-        cursor = self.connection.execute(query, args)
-        response = cursor.fetchone() if one else cursor.fetchall()
+        if one:
+            response = cursor.fetchone()
+        else:
+            response = cursor.fetchall()
+        
         cursor.close()
         self.connection.commit()
         return response
 
-    # TODO: Add more specific query methods to simplify code, hehfehf
+    def select_user_by_username(self, username: str) -> Any:
+        query = "SELECT * FROM Users WHERE username = ?;"
+        return self.query(query, one=True, params=(username,))
+    
+    def register_user(self, username: str, first_name: str, last_name: str, password: str) -> None:
+        
+        query = "INSERT INTO Users (username, first_name, last_name, password) VALUES (?, ?, ?, ?);"
+        params = (username, first_name, last_name, password)
+
+        self.query(query, params=params)
 
     def _init_database(self, schema: PathLike | str) -> None:
         """Initializes the database with the supplied schema if it does not exist yet."""

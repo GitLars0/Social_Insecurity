@@ -13,6 +13,12 @@ from app import app, sqlite
 from app.forms import CommentsForm, FriendsForm, IndexForm, PostForm, ProfileForm
 from flask_csp.csp import csp_header
 
+import re
+import bcrypt
+import time
+from flask import session
+
+
 app.config.from_object(Config)
 def escape(t):
     t = t.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("'", "&#39").replace('"', "&quot;")
@@ -21,44 +27,111 @@ def escape(t):
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
 
+
+def sanitize_input(input_str, field):
+    # Remove characters that are not allowed in usernames and names
+    sanitized_str = re.sub(r"[^a-zA-Z0-9@!$%*?&\s]", "", input_str)
+
+    # Check if any characters were removed and inform the user
+    if sanitized_str != input_str:
+        flash(f"Some characters in your input were removed due to invalid characters in {field}.", category="warning")
+        return False 
+    return sanitized_str
+#egen local variable
+failed_login_attempts = {}
+
+
+# Define a common function for checking the number of failed login attempts
+def check_failed_attempts(username):
+    if username in failed_login_attempts:
+        attempts, last_attempt_time = failed_login_attempts[username]
+        lockout_duration = 300  # Lockout duration in seconds
+
+        if attempts >= 3 and (time.time() - last_attempt_time) < lockout_duration:
+            flash("Account temporarily locked due to multiple failed login attempts. Try again later.", category="danger")
+            return True
+
+    return False
+
+def is_valid_username(username):
+    # Define the criteria for a valid username
+    valid_characters = set("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_")
+    return all(char in valid_characters for char in username)
+
 @app.route("/", methods=["GET", "POST"])
 @app.route("/index", methods=["GET", "POST"])
 
 def index():
-    """Provides the index page for the application.
-
-    It reads the composite IndexForm and based on which form was submitted,
-    it either logs the user in or registers a new user.
-
-    If no form was submitted, it simply renders the index page.
-    """
     index_form = IndexForm()
     login_form = index_form.login
     register_form = index_form.register
-
     if login_form.is_submitted() and login_form.submit.data:
-        get_user = f"""
-            SELECT *
-            FROM Users
-            WHERE username = '{login_form.username.data}';
-            """
-        user = sqlite.query(get_user, one=True)
+        username = login_form.username.data
+
+        # Check if the username is timed out due to failed login attempts
+        if check_failed_attempts(username):
+            return render_template("index.html.j2", title="Welcome", form=index_form)
+
+        # Introduce a small delay to make it harder for attackers
+        #time.sleep(2)
+
+        # Use parameterized query to avoid SQL injection
+    
+        user = sqlite.select_user_by_username(username)
+        
+
+        if not login_form.password.data:
+            flash("Sorry, failed to log in, NO Pwd entered", category="warning")
+            return redirect(url_for("index"))
+        
 
         if user is None:
-            flash("Sorry, this user does not exist!", category="warning")
-        elif user["password"] != login_form.password.data:
-            flash("Sorry, wrong password!", category="warning")
-        elif user["password"] == login_form.password.data:
-            return redirect(url_for("stream", username=login_form.username.data))
+            flash("Sorry, failed to log in, user NONE", category="warning")
+        
+            if username in failed_login_attempts:
+                attempts, last_attempt_time = failed_login_attempts[username]
+                failed_login_attempts[username] = (attempts + 1, time.time())
+            else:
+                failed_login_attempts[username] = (1, time.time())
+
+        if user != None:
+            hashed_password = bcrypt.hashpw(login_form.password.data.encode('utf-8'), user["password"].encode('utf-8')).decode('utf-8')    
+
+            if user["password"] == hashed_password:
+                failed_login_attempts.pop(username, None)
+                session['username'] = username
+                return redirect(url_for("stream", username=session['username']))
+
+        return render_template("index.html.j2", title="Welcome", form=index_form)
 
     elif register_form.is_submitted() and register_form.submit.data:
-        insert_user = f"""
-            INSERT INTO Users (username, first_name, last_name, password)
-            VALUES ('{register_form.username.data}', '{register_form.first_name.data}', '{register_form.last_name.data}', '{register_form.password.data}');
-            """  # noqa: E501
-        sqlite.query(insert_user)
+        if not is_valid_username(register_form.username.data):
+            flash("Invalid username. Usernames can only contain letters, numbers, and underscores.", category="danger")
+            return render_template("index.html.j2", title="Welcome", form=index_form)
+        # Check if the password meets the strong password criteria
+        strong_password_pattern = r"^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$"
+        if not re.match(strong_password_pattern, register_form.password.data):
+            flash("Password does not meet the strong password criteria. It should contain at least one uppercase letter, one lowercase letter, one digit, one special character (@, $, !, %, *, ?, or &), and be at least 8 characters long.", category="danger")
+            return render_template("index.html.j2", title="Welcome", form=index_form)
+
+        hashed_password = bcrypt.hashpw(register_form.password.data.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        
+        # Sanitize user input
+       
+        sanitized_username = sanitize_input(register_form.username.data, 'username')
+        sanitized_first_name = sanitize_input(register_form.first_name.data, 'first name')
+        sanitized_last_name = sanitize_input(register_form.last_name.data, 'last name')
+        
+        if sanitized_username is False or sanitized_first_name is False or sanitized_last_name is False:
+            flash("User registration failed due to invalid input.", category="danger")
+            return render_template("index.html.j2", title="Welcome", form=index_form)
+
+        sqlite.register_user(sanitized_username,sanitized_first_name, sanitized_last_name, hashed_password)
+
         flash("User successfully created!", category="success")
         return redirect(url_for("index"))
+
+
     return render_template("index.html.j2", title="Welcome", form=index_form)
 
 
