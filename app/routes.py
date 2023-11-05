@@ -6,11 +6,20 @@ It also contains the SQL queries used for communicating with the database.
 #Just a test
 
 from pathlib import Path
-
+from app.config import Config
 from flask import flash, redirect, render_template, send_from_directory, url_for
-
+from werkzeug.utils import secure_filename
 from app import app, sqlite
 from app.forms import CommentsForm, FriendsForm, IndexForm, PostForm, ProfileForm
+from flask_csp.csp import csp_header
+
+app.config.from_object(Config)
+def escape(t):
+    t = t.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("'", "&#39").replace('"', "&quot;")
+    return t
+
+def allowed_file(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
 
 @app.route("/", methods=["GET", "POST"])
 @app.route("/index", methods=["GET", "POST"])
@@ -71,12 +80,17 @@ def stream(username: str):
 
     if post_form.is_submitted():
         if post_form.image.data:
-            path = Path(app.instance_path) / app.config["UPLOADS_FOLDER_PATH"] / post_form.image.data.filename
-            post_form.image.data.save(path)
-
+            filename = secure_filename(post_form.image.data.filename)
+            if allowed_file(filename):
+                path = Path(app.instance_path) / app.config["UPLOADS_FOLDER_PATH"] / filename
+                post_form.image.data.save(path)
+            else: 
+                flash("FILE NOT ALLOWED")
+                return redirect(url_for("stream", username=username))
+        sanitized_content = escape(post_form.content.data)
         insert_post = f"""
             INSERT INTO Posts (u_id, content, image, creation_time)
-            VALUES ({user["id"]}, '{post_form.content.data}', '{post_form.image.data.filename}', CURRENT_TIMESTAMP);
+            VALUES ({user["id"]}, '{sanitized_content}', '{post_form.image.data.filename}', CURRENT_TIMESTAMP);
             """
         sqlite.query(insert_post)
         return redirect(url_for("stream", username=username))
@@ -108,9 +122,10 @@ def comments(username: str, post_id: int):
     user = sqlite.query(get_user, one=True)
 
     if comments_form.is_submitted():
+        sanitized_content = escape(comments_form.comment.data)
         insert_comment = f"""
             INSERT INTO Comments (p_id, u_id, comment, creation_time)
-            VALUES ({post_id}, {user["id"]}, '{comments_form.comment.data}', CURRENT_TIMESTAMP);
+            VALUES ({post_id}, {user["id"]}, '{sanitized_content}', CURRENT_TIMESTAMP);
             """
         sqlite.query(insert_comment)
 
@@ -133,6 +148,7 @@ def comments(username: str, post_id: int):
 
 
 @app.route("/friends/<string:username>", methods=["GET", "POST"])
+@csp_header({'default-src':"'self'",'script-src':"'self' https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.min.js ", 'style-src-elem': "'self' https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css " })
 def friends(username: str):
     """Provides the friends page for the application.
 
@@ -202,11 +218,18 @@ def profile(username: str):
     user = sqlite.query(get_user, one=True)
 
     if profile_form.is_submitted():
+        sanitized_education = escape(profile_form.education.data)
+        sanitized_employment =  escape(profile_form.employment.data)
+        sanitized_music = escape(profile_form.music.data)
+        sanitized_movie = escape(profile_form.movie.data)
+        sanitized_nationality = escape(profile_form.nationality.data)
+        sanitized_birthday = escape(profile_form.birthday.data)
+
         update_profile = f"""
             UPDATE Users
-            SET education='{profile_form.education.data}', employment='{profile_form.employment.data}',
-                music='{profile_form.music.data}', movie='{profile_form.movie.data}',
-                nationality='{profile_form.nationality.data}', birthday='{profile_form.birthday.data}'
+            SET education='{sanitized_education}', employment='{sanitized_employment}',
+                music='{sanitized_music}', movie='{sanitized_movie}',
+                nationality='{sanitized_nationality}', birthday='{sanitized_birthday}'
             WHERE username='{username}';
             """
         sqlite.query(update_profile)
